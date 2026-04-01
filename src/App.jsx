@@ -264,11 +264,11 @@ const sliderThumb = `
 `;
 
 /* ── CARD ───────────────────────────────────────────────── */
-function Card({ title, sub, C, globalT }) {
+function Card({ title, sub, C, globalT, period }) {
   const [manual, setManual] = useState(false);
   const [sliderVal, setSliderVal] = useState(0);
 
-  const effectiveT = manual ? sliderVal : globalT;
+  const effectiveT = manual ? sliderVal * period : globalT;
 
   const handleSlider = useCallback((e) => {
     setManual(true);
@@ -319,9 +319,9 @@ function Card({ title, sub, C, globalT }) {
         <input
           type="range"
           min="0"
-          max="10"
-          step="0.02"
-          value={manual ? sliderVal : (globalT % 10)}
+          max="1"
+          step="0.005"
+          value={manual ? sliderVal : ((globalT % period) / period)}
           onChange={handleSlider}
           style={{ flex: 1 }}
         />
@@ -350,14 +350,14 @@ function Card({ title, sub, C, globalT }) {
 
 /* ── MAIN ────────────────────────────────────────────────── */
 const CARDS = [
-  { title:"Hydraulic Press",    sub:"Pascal's Law",         C: Hydraulic },
-  { title:"Muscle Contraction", sub:"Sliding Filaments",    C: Muscle    },
-  { title:"Lever",              sub:"Mechanical Advantage", C: Lever     },
-  { title:"Pneumatics",         sub:"Compressed Air",       C: Pneumatic },
-  { title:"Turgor / Osmosis",   sub:"Osmotic Pressure",     C: Turgor    },
-  { title:"Piezoelectricity",   sub:"Deform → Voltage",     C: Piezo     },
-  { title:"Screw / Gear",       sub:"Rotary ↔ Linear",      C: Screw     },
-  { title:"Motor Proteins",     sub:"Kinesin · ATP",        C: Kinesin   },
+  { title:"Hydraulic Press",    sub:"Pascal's Law",         C: Hydraulic, period: 3   },
+  { title:"Muscle Contraction", sub:"Sliding Filaments",    C: Muscle,    period: 2.5 },
+  { title:"Lever",              sub:"Mechanical Advantage", C: Lever,     period: 2.5 },
+  { title:"Pneumatics",         sub:"Compressed Air",       C: Pneumatic, period: 3   },
+  { title:"Turgor / Osmosis",   sub:"Osmotic Pressure",     C: Turgor,    period: 4   },
+  { title:"Piezoelectricity",   sub:"Deform → Voltage",     C: Piezo,     period: 2.5 },
+  { title:"Screw / Gear",       sub:"Rotary ↔ Linear",      C: Screw,     period: 4   },
+  { title:"Motor Proteins",     sub:"Kinesin · ATP",        C: Kinesin,   period: 1   },
 ];
 
 export default function App() {
@@ -412,8 +412,8 @@ export default function App() {
           width: "100%",
           maxWidth: "1200px",
         }}>
-          {CARDS.map(({ title, sub, C }) => (
-            <Card key={title} title={title} sub={sub} C={C} globalT={t} />
+          {CARDS.map(({ title, sub, C, period }) => (
+            <Card key={title} title={title} sub={sub} C={C} globalT={t} period={period} />
           ))}
         </div>
 
