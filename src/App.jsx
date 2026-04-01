@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 const eio = t => t < .5 ? 2*t*t : 1 - Math.pow(-2*t+2,2)/2;
 const pp  = (t, p=2) => { const x=(t%p)/p; return x<.5?eio(x*2):eio(2-x*2); };
@@ -7,23 +7,19 @@ const s01 = (t, p=2) => (Math.sin(t/p*Math.PI*2)+1)/2;
 /* ── HYDRAULIC ─────────────────────────────────────────── */
 function Hydraulic({t}) {
   const ph = pp(t,3);
-  const sp = 12 + ph*38;   // small piston Y  (12→50)
-  const bp = 28 - ph*12;   // big piston Y    (28→16, goes UP)
+  const sp = 12 + ph*38;
+  const bp = 28 - ph*12;
   return (
     <svg viewBox="0 0 160 100" width="100%" height="100%">
-      {/* fluid */}
       <rect x="22" y={sp+10} width="26" height={88-sp-10} fill="#1d4ed8" opacity=".4"/>
       <rect x="22" y="87"    width="116" height="11"       fill="#1d4ed8" opacity=".4"/>
       <rect x="94" y={bp+7}  width="44" height={88-bp-7}  fill="#1d4ed8" opacity=".4"/>
-      {/* cylinders */}
       <rect x="21" y="10" width="28" height="78" rx="1.5" fill="none" stroke="#323232" strokeWidth="1.5"/>
       <rect x="93" y="26" width="46" height="62" rx="1.5" fill="none" stroke="#323232" strokeWidth="1.5"/>
       <rect x="21" y="86" width="118" height="12" rx="1.5" fill="none" stroke="#323232" strokeWidth="1.5"/>
-      {/* pistons */}
       <rect x="22" y={sp}   width="26" height="10" rx="1" fill="#c8c8c8"/>
       <rect x="32" y="0"    width="6"  height={sp} rx="1" fill="#888"/>
       <rect x="94" y={bp}   width="44" height="7"  rx="1" fill="#c8c8c8"/>
-      {/* labels */}
       <text x="35"  y="8"  textAnchor="middle" fontSize="6.5" fill="#555" fontFamily="monospace">F ↓</text>
       <text x="116" y="22" textAnchor="middle" fontSize="6"   fill="#555" fontFamily="monospace">F·A₂/A₁ ↑</text>
     </svg>
@@ -44,18 +40,15 @@ function Muscle({t}) {
       <line x1={rightZ} y1="12" x2={rightZ} y2="90" stroke="#2a2a2a" strokeWidth="2.5"/>
       {rows.map((y,i)=>(
         <g key={i}>
-          {/* myosin */}
           <rect x="40" y={y-3} width="80" height="6" rx="3" fill="#4b5563"/>
-          {/* left actin */}
           <rect x={leftZ}       y={y-1} width={aLen} height="2" rx="1" fill="#2563eb"/>
           <rect x={leftZ}       y={y-4} width="5"    height="8" rx="1" fill="#60a5fa"/>
-          {/* right actin */}
           <rect x={rightZ-aLen} y={y-1} width={aLen} height="2" rx="1" fill="#2563eb"/>
           <rect x={rightZ-5}    y={y-4} width="5"    height="8" rx="1" fill="#60a5fa"/>
         </g>
       ))}
       <text x="80" y="98" textAnchor="middle" fontSize="6.5" fill="#444" fontFamily="monospace">
-        수축 {Math.round(ph*100)}%
+        contraction {Math.round(ph*100)}%
       </text>
     </svg>
   );
@@ -79,7 +72,7 @@ function Lever({t}) {
       <text x={lx}    y={ly+9.5} textAnchor="middle" fontSize="7.5" fill="white">F</text>
       <circle cx={rx} cy={ry-9}  r="9" fill="#16a34a" opacity=".9"/>
       <text x={rx}    y={ry-5.5} textAnchor="middle" fontSize="8" fill="white">↑</text>
-      <text x={cx} y="102" textAnchor="middle" fontSize="6.5" fill="#444" fontFamily="monospace">받침점</text>
+      <text x={cx} y="102" textAnchor="middle" fontSize="6.5" fill="#444" fontFamily="monospace">fulcrum</text>
     </svg>
   );
 }
@@ -108,7 +101,7 @@ function Pneumatic({t}) {
         <circle cx="110" cy="64" r="2" fill="#3b82f6" opacity={ph*.3}/>
         <text x="120" y="68" fontSize="10" fill="#2563eb" opacity={ph}>→</text>
       </>}
-      <text x="48" y="100" textAnchor="middle" fontSize="6.5" fill="#444" fontFamily="monospace">공압 실린더</text>
+      <text x="48" y="100" textAnchor="middle" fontSize="6.5" fill="#444" fontFamily="monospace">pneumatic cylinder</text>
     </svg>
   );
 }
@@ -136,7 +129,7 @@ function Turgor({t}) {
       })}
       <text x={cx} y={cy+3.5} textAnchor="middle" fontSize="9" fill="#93c5fd" dominantBaseline="middle">H₂O</text>
       <text x={cx} y="95" textAnchor="middle" fontSize="6.5" fill="#444" fontFamily="monospace">
-        팽압 {Math.round(ph*100)}%
+        turgor {Math.round(ph*100)}%
       </text>
     </svg>
   );
@@ -167,7 +160,7 @@ function Piezo({t}) {
         <line x1={cX+cW} y1={cY+cH-4} x2="148" y2={cY+cH-4} stroke="#fbbf24" strokeWidth="1.5"/>
         <text x="151" y={cY+cH/2+5} textAnchor="middle" fontSize="16" fill="#fbbf24">⚡</text>
       </g>
-      <text x="80" y="101" textAnchor="middle" fontSize="6.5" fill="#444" fontFamily="monospace">압전 결정 → 전압</text>
+      <text x="80" y="101" textAnchor="middle" fontSize="6.5" fill="#444" fontFamily="monospace">crystal → voltage</text>
     </svg>
   );
 }
@@ -196,8 +189,8 @@ function Screw({t}) {
           stroke="#383838" strokeWidth="1.5"/>
       );})}
       <circle cx={cx+Math.cos(rotRad)*(r-6)} cy={cy+Math.sin(rotRad)*(r-6)} r="4" fill="#f59e0b"/>
-      <text x="42"  y="97" textAnchor="middle" fontSize="6.5" fill="#444" fontFamily="monospace">직선운동 →</text>
-      <text x="128" y="97" textAnchor="middle" fontSize="6.5" fill="#444" fontFamily="monospace">회전운동</text>
+      <text x="42"  y="97" textAnchor="middle" fontSize="6.5" fill="#444" fontFamily="monospace">linear →</text>
+      <text x="128" y="97" textAnchor="middle" fontSize="6.5" fill="#444" fontFamily="monospace">rotary</text>
     </svg>
   );
 }
@@ -218,18 +211,14 @@ function Kinesin({t}) {
   const l2y = l2Moving ? footY-Math.sin(l2Ph*Math.PI)*13 : footY;
   return (
     <svg viewBox="0 0 160 98" width="100%" height="100%">
-      {/* microtubule */}
       <rect x="8" y="76" width="144" height="12" rx="2" fill="#071e34" stroke="#1e3a8a" strokeWidth="1"/>
       {Array.from({length:11},(_,i)=>(
         <line key={i} x1={8+i*13} y1="76" x2={8+i*13} y2="88" stroke="#1e3a8a" strokeWidth=".5" opacity=".5"/>
       ))}
-      {/* cargo */}
       <rect x={bx}    y="44" width="20" height="12" rx="2" fill="#3b0764"/>
       <text x={bx+10} y="52.5" textAnchor="middle" fontSize="5.5" fill="#c4b5fd">cargo</text>
       <line x1={bx+10} y1="56" x2={bx+10} y2="60" stroke="#7c3aed" strokeWidth="1"/>
-      {/* body */}
       <ellipse cx={bx+10} cy="62" rx="13" ry="7" fill="#d4d4d4"/>
-      {/* legs (back first) */}
       <line x1={bx+6}  y1="67" x2={l2x} y2={l2y} stroke="#888" strokeWidth="2.5" strokeLinecap="round"/>
       <circle cx={l2x} cy={l2y} r="3.5" fill={l2Moving?"#f59e0b":"#555"}/>
       <line x1={bx+14} y1="67" x2={l1x} y2={l1y} stroke="#ccc" strokeWidth="2.5" strokeLinecap="round"/>
@@ -239,16 +228,136 @@ function Kinesin({t}) {
   );
 }
 
+/* ── SLIDER STYLE ───────────────────────────────────────── */
+const sliderThumb = `
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: #1a1a1a;
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #3b82f6;
+    border: 2px solid #1e3a8a;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover {
+    background: #60a5fa;
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #3b82f6;
+    border: 2px solid #1e3a8a;
+    cursor: pointer;
+  }
+`;
+
+/* ── CARD ───────────────────────────────────────────────── */
+function Card({ title, sub, C, globalT }) {
+  const [manual, setManual] = useState(false);
+  const [sliderVal, setSliderVal] = useState(0);
+
+  const effectiveT = manual ? sliderVal : globalT;
+
+  const handleSlider = useCallback((e) => {
+    setManual(true);
+    setSliderVal(parseFloat(e.target.value));
+  }, []);
+
+  const handleReset = useCallback(() => {
+    setManual(false);
+  }, []);
+
+  return (
+    <div style={{
+      background: "#0e0e0e",
+      border: "1px solid #191919",
+      borderRadius: "6px",
+      overflow: "hidden",
+      display: "flex",
+      flexDirection: "column",
+    }}>
+      <div style={{
+        aspectRatio: "16 / 10",
+        padding: "8px",
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <C t={effectiveT} />
+      </div>
+      <div style={{
+        padding: "10px 14px 12px",
+        borderTop: "1px solid #161616",
+        flex: "0 0 auto",
+      }}>
+        <div style={{ color: "#e0e0e0", fontSize: "11.5px", fontWeight: 500,
+          fontFamily: "'DM Sans', sans-serif" }}>
+          {title}
+        </div>
+        <div style={{ color: "#333", fontSize: "9.5px", marginTop: "3px",
+          letterSpacing: ".06em" }}>
+          {sub}
+        </div>
+      </div>
+      <div style={{
+        padding: "6px 14px 12px",
+        borderTop: "1px solid #131313",
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+      }}>
+        <input
+          type="range"
+          min="0"
+          max="10"
+          step="0.02"
+          value={manual ? sliderVal : (globalT % 10)}
+          onChange={handleSlider}
+          style={{ flex: 1 }}
+        />
+        <button
+          onClick={handleReset}
+          title="Resume auto-play"
+          style={{
+            background: manual ? "#1e3a8a" : "#1a1a1a",
+            border: "1px solid #2a2a2a",
+            borderRadius: "4px",
+            color: manual ? "#60a5fa" : "#444",
+            fontSize: "10px",
+            padding: "3px 8px",
+            cursor: "pointer",
+            fontFamily: "monospace",
+            whiteSpace: "nowrap",
+            transition: "all .15s",
+          }}
+        >
+          {manual ? "▶ auto" : "● auto"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ── MAIN ────────────────────────────────────────────────── */
 const CARDS = [
-  { title:"유압 프레스",  sub:"Pascal's Law",      C: Hydraulic },
-  { title:"근육 수축",    sub:"Sliding Filaments", C: Muscle    },
-  { title:"지레",         sub:"Mechanical Lever",  C: Lever     },
-  { title:"공압",         sub:"Pneumatics",        C: Pneumatic },
-  { title:"팽압 / 삼투압", sub:"Osmotic Pressure", C: Turgor    },
-  { title:"압전 효과",    sub:"Piezoelectricity",  C: Piezo     },
-  { title:"나사 / 기어",  sub:"Rotary → Linear",   C: Screw     },
-  { title:"모터 단백질",  sub:"Kinesin · ATP",     C: Kinesin   },
+  { title:"Hydraulic Press",    sub:"Pascal's Law",         C: Hydraulic },
+  { title:"Muscle Contraction", sub:"Sliding Filaments",    C: Muscle    },
+  { title:"Lever",              sub:"Mechanical Advantage", C: Lever     },
+  { title:"Pneumatics",         sub:"Compressed Air",       C: Pneumatic },
+  { title:"Turgor / Osmosis",   sub:"Osmotic Pressure",     C: Turgor    },
+  { title:"Piezoelectricity",   sub:"Deform → Voltage",     C: Piezo     },
+  { title:"Screw / Gear",       sub:"Rotary ↔ Linear",      C: Screw     },
+  { title:"Motor Proteins",     sub:"Kinesin · ATP",        C: Kinesin   },
 ];
 
 export default function App() {
@@ -266,70 +375,56 @@ export default function App() {
   }, []);
 
   return (
-    <div style={{
-      background: "#080808",
-      minHeight: "100vh",
-      padding: "32px 24px",
-      fontFamily: "'DM Mono', 'Courier New', monospace",
-    }}>
-      {/* header */}
-      <div style={{ marginBottom: "28px" }}>
-        <div style={{
-          color: "#2a2a2a", fontSize: "9px", letterSpacing: ".22em",
-          textTransform: "uppercase", marginBottom: "8px",
-        }}>
-          ◼ FORCE TRANSFER MECHANISMS
-        </div>
-        <div style={{
-          color: "#e0e0e0", fontSize: "18px", fontWeight: 300,
-          letterSpacing: "-.01em", fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif",
-        }}>
-          힘을 전달하는 방식들
-        </div>
-      </div>
-
-      {/* grid */}
+    <>
+      <style>{sliderThumb}</style>
       <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(188px, 1fr))",
-        gap: "8px",
-        maxWidth: "940px",
+        background: "#080808",
+        minHeight: "100vh",
+        padding: "clamp(24px, 5vw, 64px)",
+        fontFamily: "'DM Mono', 'Courier New', monospace",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
       }}>
-        {CARDS.map(({ title, sub, C }) => (
-          <div key={title} style={{
-            background: "#0e0e0e",
-            border: "1px solid #191919",
-            borderRadius: "6px",
-            overflow: "hidden",
+        {/* header */}
+        <div style={{ width: "100%", maxWidth: "1200px", marginBottom: "28px" }}>
+          <div style={{
+            color: "#2a2a2a", fontSize: "9px", letterSpacing: ".22em",
+            textTransform: "uppercase", marginBottom: "8px",
+            textAlign: "center",
           }}>
-            <div style={{
-              height: "148px",
-              padding: "8px",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <C t={t} />
-            </div>
-            <div style={{
-              padding: "10px 14px 12px",
-              borderTop: "1px solid #161616",
-            }}>
-              <div style={{ color: "#e0e0e0", fontSize: "11.5px", fontWeight: 500,
-                fontFamily: "'DM Sans', sans-serif" }}>
-                {title}
-              </div>
-              <div style={{ color: "#333", fontSize: "9.5px", marginTop: "3px",
-                letterSpacing: ".06em" }}>
-                {sub}
-              </div>
-            </div>
+            ◼ FORCE TRANSFER MECHANISMS
           </div>
-        ))}
-      </div>
+          <div style={{
+            color: "#e0e0e0", fontSize: "clamp(16px, 2.5vw, 22px)", fontWeight: 300,
+            letterSpacing: "-.01em", fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif",
+            textAlign: "center",
+          }}>
+            Ways Force Moves Through the World
+          </div>
+        </div>
 
-      {/* footer */}
-      <div style={{ marginTop: "24px", color: "#1e1e1e", fontSize: "8.5px", letterSpacing: ".15em" }}>
-        ENERGY IS CONSERVED — ONLY FORM AND RATIO CHANGE
+        {/* grid */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 240px), 1fr))",
+          gap: "12px",
+          width: "100%",
+          maxWidth: "1200px",
+        }}>
+          {CARDS.map(({ title, sub, C }) => (
+            <Card key={title} title={title} sub={sub} C={C} globalT={t} />
+          ))}
+        </div>
+
+        {/* footer */}
+        <div style={{
+          marginTop: "32px", color: "#1e1e1e", fontSize: "8.5px",
+          letterSpacing: ".15em", textAlign: "center",
+        }}>
+          ENERGY IS CONSERVED — ONLY FORM AND RATIO CHANGE
+        </div>
       </div>
-    </div>
+    </>
   );
 }
